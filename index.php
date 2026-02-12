@@ -34,7 +34,7 @@
                         $req_time = time();
                         $merchant_id = "ec463594";
                         $transactionId = time();
-                        $amount = '0.01';
+                        $amount = '2.00';
                         $firstName = 'Makara';
                         $lastName = 'Prom';
                         $phone = '093630466';
@@ -60,7 +60,7 @@
 <!--                        <input type="hidden" name="shipping" value="--><?php //echo $shipping; ?><!--"/>-->
 <!--                        <input type="hidden" name="payment_option" value="cards"/>-->
 <!--                        <input type="hidden" name="payment_option" value="--><?php //echo $payment_option;?><!--"/>-->
-<!--                        <input type="hidden" name="currency" value="KHR"/>-->
+                         <input type="hidden" name="currency" value="USD"/>
 <!--                        <input type="hidden" name="type" value="--><?php //echo $type; ?><!--"/>-->
 <!--                        <input type="hidden" name="return_url" value="test.com.kh"/>-->
 <!--                        <input type="hidden" name="payment_gate" value="0"/>-->
