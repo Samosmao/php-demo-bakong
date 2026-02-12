@@ -1,63 +1,57 @@
 <?php
-// PayWayApiCheckout.php
-
-// ====== HARD-CODE CONFIG (EDIT HERE) ======
+/*
+|--------------------------------------------------------------------------
+| ABA PayWay API URL
+|--------------------------------------------------------------------------
+| API URL that is provided by PayWay must be required in your post form
+|
+*/
 define('ABA_PAYWAY_API_URL', 'https://checkout-sandbox.payway.com.kh/api/payment-gateway/v1/payments/purchase');
-define('ABA_PAYWAY_MERCHANT_ID', 'ec463594');
+
+/*
+|--------------------------------------------------------------------------
+| ABA PayWay API KEY
+|--------------------------------------------------------------------------
+| API KEY that is generated and provided by PayWay must be required in your post form
+|
+*/
 define('ABA_PAYWAY_API_KEY', '017552060dc3c37efffc52c0de03c67db2d114c4');
-// ==========================================
 
-final class PayWayApiCheckout
-{
-    public static function getApiUrl(): string
-    {
-        return ABA_PAYWAY_API_URL;
-    }
+/*
+|--------------------------------------------------------------------------
+| ABA PayWay Merchant ID
+|--------------------------------------------------------------------------
+| Merchant ID that is generated and provided by PayWay must be required in your post form
+|
+*/
+define('ABA_PAYWAY_MERCHANT_ID', 'ec463594');
 
-    public static function getMerchantId(): string
-    {
-        return ABA_PAYWAY_MERCHANT_ID;
-    }
 
-    public static function getHash(string $data): string
-    {
-        return base64_encode(hash_hmac('sha512', $data, ABA_PAYWAY_API_KEY, true));
+class PayWayApiCheckout {
+
+    /**
+     * Returns the getHash
+     * For PayWay security, you must follow the way of encryption for hash.
+     *
+     * @param string $transactionId
+     * @param string $amount
+     *
+     * @return string getHash
+     */
+    public static function getHash($str) {
+
+      //  echo 'before hash: '.$str.'<br><br>';
+
+        $hash = base64_encode(hash_hmac('sha512', $str, ABA_PAYWAY_API_KEY, true));
+        return $hash;
     }
 
     /**
-     * Builds the hash string in EXACT order per PayWay docs.
-     * All fields (even empty) must be included if submitted in the form.
+     * Returns the getApiUrl
+     *
+     * @return string getApiUrl
      */
-    public static function buildHash(array $payload): string
-    {
-        $order = [
-            'req_time',
-            'merchant_id',
-            'tran_id',
-            'amount',
-            'items',
-            'shipping',
-            'ctid',
-            'pwt',
-            'firstname',
-            'lastname',
-            'email',
-            'phone',
-            'type',
-            'payment_option',
-            'return_url',
-            'cancel_url',
-            'continue_success_url',
-            'return_deeplink',
-            'currency',
-            'custom_fields',
-            'return_params',
-        ];
-
-        $s = '';
-        foreach ($order as $k) {
-            $s .= (string)($payload[$k] ?? '');
-        }
-        return self::getHash($s);
+    public static function getApiUrl() {
+        return ABA_PAYWAY_API_URL;
     }
 }
