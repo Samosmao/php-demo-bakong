@@ -1,104 +1,107 @@
-<!DOCTYPE html>
-<html lang="en">
+<?php
+require_once __DIR__ . '/PayWayApiCheckout.php';
 
-	<head>
-		<title>PayWay Checkout Sample</title>
+// ====== SIMPLE SETTINGS ======
+$amount   = '2.00';   // USD example
+$currency = 'USD';    // USD or KHR (KHR must be >= 100)
+$itemData = [         // Proper items format: array of items
+    ['name' => 'Test Item', 'quantity' => 1, 'price' => 2.00]
+];
+$items    = base64_encode(json_encode(['item' => $itemData]));  // Required: base64(json)
+$shipping = '0.00';   // Decimal string
+// =============================
 
-		<!— Make a copy of this code to paste into your site—>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-		<meta name="author" content="PayWay">
-		<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+// Auto base URL (works local + render)
+$scheme  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host    = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$baseUrl = $scheme . '://' . $host . rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/');
 
-		<!— end —>
-	</head>
+// Redirect URLs
+$returnUrl  = $baseUrl . '/index.php?status=return';
+$cancelUrl  = $baseUrl . '/index.php?status=cancel';
+$successUrl = $baseUrl . '/index.php?status=success';
 
-	<body>
-		<!— Popup Checkout Form —>
-			<div id="aba_main_modal" class="aba-modal">
-				<!— Modal content —>
-				<div class="aba-modal-content">
+// Show redirect result
+if (isset($_GET['status'])) {
+    echo "<h3>Status: " . htmlspecialchars($_GET['status']) . "</h3>";
+    echo "<pre>" . htmlspecialchars(print_r($_GET, true)) . "</pre>";
+    echo '<p><a href="index.php">Back</a></p>';
+    exit;
+}
 
-					<!-- Include PHP class -->
-					<?php
-						require_once 'PayWayApiCheckout.php';
-//                        $item [0]['name'] = 'test1';
-//                        $item [0]['quantity'] = '1';
-//                        $item [0]['price'] = '1';
-//                        $item [1]['name'] = 'test2';
-//                        $item [1]['quantity'] = '1';
-//                        $item [1]['price'] = '1';
-//
-//                        $items = base64_encode(json_encode($item));
+// Validate KHR minimum
+if ($currency === 'KHR' && (float)$amount < 100) {
+    die("KHR amount must be >= 100");
+}
 
-                        $req_time = time();
-                        $merchant_id = "ec463594";
-                        $transactionId = time();
-                        $amount = '2.00';
-                        $firstName = 'Makara';
-                        $lastName = 'Prom';
-                        $phone = '093630466';
-                        $email = 'prom.makara@ababank.com';
-                        $return_params = "Hello World!";
-//                        $type = "pre-auth";
-//                        $payment_option = "abapay";
-//                        $shipping = '2';
-//                    $continue_success_url = "https://domain.gov.kh/buydomain/PurchasThank";
-//                    $type = "PreAuth";
-					?>
+// Create tran id and req_time
+$tranId   = 'T' . date('YmdHis') . rand(1000, 9999);
+$reqTime  = gmdate('YmdHis');  // UTC, mandatory
 
-					<form method="POST" target="aba_webservice" action="<?php echo PayWayApiCheckout::getApiUrl(); ?>" id="aba_merchant_request">
-						<input type="hidden" name="hash" value="<?php echo PayWayApiCheckout::getHash($req_time . ABA_PAYWAY_MERCHANT_ID . $transactionId . $amount . $firstName  .$lastName .$email .$phone .$return_params); ?>" id="hash"/>
-						<input type="hidden" name="tran_id" value="<?php echo $transactionId; ?>" id="tran_id"/>
-						<input type="hidden" name="amount" value="<?php echo $amount; ?>" id="amount"/>
-						<input type="hidden" name="firstname" value="<?php echo $firstName; ?>"/>
-						<input type="hidden" name="lastname" value="<?php echo $lastName; ?>"/>
-						<input type="hidden" name="phone" value="<?php echo $phone; ?>"/>
-						<input type="hidden" name="email" value="<?php echo $email; ?>"/>
-<!--                        <input ype="hidden" name="items" value="--><?php //echo $items; ?><!--" id="items"/>-->
-                        <input type="hidden" name="return_params" value="<?php echo $return_params; ?>"/>
-<!--                        <input type="hidden" name="shipping" value="--><?php //echo $shipping; ?><!--"/>-->
-<!--                        <input type="hidden" name="payment_option" value="cards"/>-->
-<!--                        <input type="hidden" name="payment_option" value="--><?php //echo $payment_option;?><!--"/>-->
-                         <input type="hidden" name="currency" value="USD"/>
-<!--                        <input type="hidden" name="type" value="--><?php //echo $type; ?><!--"/>-->
-<!--                        <input type="hidden" name="return_url" value="test.com.kh"/>-->
-<!--                        <input type="hidden" name="payment_gate" value="0"/>-->
-                        <input type="hidden" name="merchant_id" value="<?php echo $merchant_id; ?>"/>
-                        <input type="hidden" name="req_time" value="<?php echo $req_time; ?>"/>
-<!--                        <input type="hidden" name="continue_success_url" value="--><?php //echo $continue_success_url; ?><!--"/>-->
-<!--                        <input type="hidden" name="return_param" value="Hello, It's me!"/>-->
-                    </form>
-				</div>
-				<!— end Modal content—>
-			</div>
-		<!— End Popup Checkout Form —>
+// Build payload (use exact param names, include all for hash)
+$payload = [
+    'req_time'             => $reqTime,
+    'merchant_id'          => PayWayApiCheckout::getMerchantId(),
+    'tran_id'              => $tranId,
+    'amount'               => $amount,
+    'items'                => $items,
+    'shipping'             => $shipping,
+    'ctid'                 => '',  // Empty if not using Credentials on File
+    'pwt'                  => '',  // Empty if not using
+    'firstname'            => 'Test',  // No underscore
+    'lastname'             => 'User',  // No underscore
+    'email'                => 'test@example.com',
+    'phone'                => '012345678',
+    'type'                 => 'purchase',
+    'payment_option'       => 'abapay',  // Or 'cards' for card payments
+    'return_url'           => $returnUrl,
+    'cancel_url'           => $cancelUrl,
+    'continue_success_url' => $successUrl,
+    'return_deeplink'      => '',  // For mobile apps if needed
+    'currency'             => $currency,
+    'custom_fields'        => '',  // base64(json) if needed
+    'return_params'        => '',  // Any note/params returned on callback
+];
 
-		<!— Page Content —>
-		<div class="container" style="margin-top: 75px;margin: 0 auto;">
-			<div style="width: 200px;margin: 0 auto;">
-				<h2>TOTAL: $2.00</h2>
-				<input type="button" id="checkout_button" value="Checkout Now">
-			</div>
-		</div>
-		<!— End Page Content —>
+$payload['hash'] = PayWayApiCheckout::buildHash($payload);
 
-		<!— Make a copy this javaScript to paste into your site—>
-		<!— Note: these javaScript files are using for only integration testing—>
+$checkoutUrl = PayWayApiCheckout::getApiUrl();
+?>
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ABA PayWay - abapay</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:18px}
+    .card{max-width:520px;margin:0 auto;border:1px solid #ddd;border-radius:10px;padding:16px}
+    button{padding:12px 14px;font-size:16px;width:100%;cursor:pointer}
+    pre{white-space:pre-wrap;word-break:break-word}
+  </style>
+</head>
+<body>
+<div class="card">
+  <h2>Checkout</h2>
+  <p><b>Total:</b> <?= htmlspecialchars($amount) ?> <?= htmlspecialchars($currency) ?></p>
+  <p><b>Payment Option:</b> abapay</p>
 
-<!--		<link rel="stylesheet" href="https://payway-staging.ababank.com/checkout-popup.html?file=css"/>-->
-		<script src="https://checkout.payway.com.kh/plugins/checkout2-0.js"></script>
-		<!— These javaScript files are using for only production —>
-		<!--<link rel="stylesheet" href="https://payway.ababank.com/checkout-popup.html?file=css"/>
-		<script src="https://payway.ababank.com/checkout-popup.html?file=js"></script> -->
+  <form id="paywayForm" method="post" action="<?= htmlspecialchars($checkoutUrl) ?>">
+    <?php foreach ($payload as $k => $v): ?>
+      <input type="hidden" name="<?= htmlspecialchars($k) ?>" value="<?= htmlspecialchars((string)$v) ?>">
+    <?php endforeach; ?>
+    <button type="submit">Checkout Now</button>
+  </form>
 
-		<script>
-			$(document).ready(function () {
-				$('#checkout_button').click(function () {
-					AbaPayway.checkout();
-				});
-			});
-		</script>
-		<!— End —>
-	</body>
+  <script>
+    // Auto submit (optional). If you want manual click, comment next line.
+    // document.getElementById('paywayForm').submit();
+  </script>
+
+  <details style="margin-top:12px">
+    <summary>Debug payload</summary>
+    <pre><?= htmlspecialchars(print_r($payload, true)) ?></pre>
+  </details>
+</div>
+</body>
 </html>
